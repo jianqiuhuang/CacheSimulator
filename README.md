@@ -19,5 +19,7 @@ Your goal is to write a program in C or C++ that would use these traces to measu
 
 </br>
 6)	Prefetch-on-a-Miss. This is similar to part (5) above, but prefetching is only triggered on a cache miss.
-Extra credit problem [30%]: Propose and implement a new cache replacement or prefetching mechanism that outperforms either the LRU replacement or the next-line prefetcher. Evaluate your proposal on the designs listed in question (2) above. Feel free to use any supplementary literature that you can find on this subject.
+
+</br>
+Propose and implement a new cache replacement or prefetching mechanism that outperforms either the LRU replacement or the next-line prefetcher. Evaluate your proposal on the designs listed in question (2) above. Feel free to use any supplementary literature that you can find on this subject.
 
