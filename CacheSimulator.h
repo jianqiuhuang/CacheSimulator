@@ -1,5 +1,5 @@
 #ifndef CACHESIMULATOR_H
-#define CASHESIMULATOR_H
+#define CACHESIMULATOR_H
 
 #include <iostream>
 #include <string>
