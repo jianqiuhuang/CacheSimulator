@@ -1,6 +1,6 @@
 #include "CacheSimulator.h"
 
-const static int DEBUG = 1;
+const static int DEBUG = 0;
 
 Cache_simulator::Cache_simulator(cache_policy type, std::string infile_name, std::string outfile_name){
 	cache_type = type;
@@ -10,9 +10,8 @@ Cache_simulator::Cache_simulator(cache_policy type, std::string infile_name, std
 }
 
 void Cache_simulator::simulate(int cache_size, int cache_line_size, int associativity){
-	std::cout << "cache miss rate: " << std::endl;
 	if(cache_type == DIRECT_MAPPED)
-		std::cout << "cache missed rate: " << direct_mapped(cache_size, cache_line_size) * 100 << "%" << std::endl;
+		std::cout << "direct-mapped: " << direct_mapped(cache_size, cache_line_size) * 100 << "%" << std::endl;
 	else if(cache_type == SET_ASSOCIATIVE)
 		std::cout << "set-associative: " << set_associative(cache_size, cache_line_size, associativity) * 100 << "%" << std::endl;
 	else{
@@ -33,7 +32,7 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 	std::string line;
 	char instruction_type;
 	long long address, cache_line_index, base, cache_index;
-	long long total_referenced = 0, cache_missed = 0;
+	long long total_referenced = 0, cache_hit = 0;
 	
 	while(std::getline(infile, line)){
 		total_referenced++;
@@ -56,7 +55,6 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 		
 		//cache missed
 		if(cache[cache_index][cache_line_index] != address){
-			cache_missed++;
 			
 			if(DEBUG){
 				std::cerr << "the reference was a cache miss" << std::endl;
@@ -81,6 +79,7 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 			}
 
 		}else{
+			cache_hit++;
 			if(DEBUG){
 				std::cerr << "the reference was a cache hit" << std::endl;
 				std::cerr << "cache line with data: " << std::endl;
@@ -92,14 +91,14 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 		}
 	}
 	infile.close();
-	std::cout << "total referenced: " << total_referenced << " --- cache missed: " << cache_missed << std::endl;
-	return (double) cache_missed / total_referenced;
+	std::cout << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
+	return (double) cache_hit / total_referenced;
 }
 
 double Cache_simulator::set_associative(int cache_size, int cache_line_size, int associativity){
 	int cache_entries = cache_size / cache_line_size / associativity;
 	if(DEBUG){
-		std::cerr << "the cache has " << associativity << " ways and " << cache_entries << " entries in each way" << std::endl;
+		std::cerr << "the cache has " << associativity << " ways and " << cache_entries << " entries in each way, and " << cache_line_size << " elements per cache line" << std::endl;
 	}
 	
 	//Initialize cache entries
@@ -113,10 +112,10 @@ double Cache_simulator::set_associative(int cache_size, int cache_line_size, int
 	std::string line;
 	char instruction_type;
 	long long address, cache_line_index, base, cache_index;
-	long long total_referenced = 0, cache_missed = 0;
-	bool cache_hit = false;
+	long long total_referenced = 0, cache_hit = 0;
 
 	while(std::getline(infile, line)){
+		bool hit = false;
 		total_referenced++;
 		
 		std::stringstream ss;
@@ -138,37 +137,36 @@ double Cache_simulator::set_associative(int cache_size, int cache_line_size, int
 
 		for(unsigned int i = 0; i < cache.size(); i++){
 			
-			std::cerr << "Before updating:\nway " << i << ":" << std::endl;
 			if(DEBUG){
-				std::cerr << "last used time of this cache line: " <<  cache[i][cache_index].last_used_time << std::endl;
-				for(unsigned int z = 0; z < cache[i][cache_size].cache_line.size(); z++){
-					std::cerr << std::hex << cache[i][cache_index].cache_line[i] << " ";
+				std::cerr << "Before updating:\nway " << i << ":" << std::endl;
+				std::cerr << "last used time of this cache line: " <<  cache[i][cache_index].last_used_time << std::endl << "data: " << std::endl;
+				for(unsigned int z = 0; z < cache[i][cache_index].cache_line.size(); z++){
+					std::cerr << std::hex << cache[i][cache_index].cache_line[z] << " ";
 				}
 				std::cerr << std::endl;
 			}
 			
 			if(cache[i][cache_index].cache_line[cache_line_index] == address){
-
+				cache_hit++;
 				//Cache hit -- update last_used_time
 				cache[i][cache_index].last_used_time = std::chrono::duration<double, std::milli> (std::chrono::high_resolution_clock::now() - start_time).count();
 
 				if(DEBUG){
 					std::cerr << "Cache hit!!\nin way " << i <<  "\nAfter updating: " << std::endl;
-					std::cerr << "last used time of this cache line: " <<  cache[i][cache_index].last_used_time << std::endl;
-					for(unsigned int z = 0; z < cache[i][cache_size].cache_line.size(); z++){
-						std::cerr << std::hex << cache[i][cache_index].cache_line[i] << " ";
+					std::cerr << "last used time of this cache line: " <<  cache[i][cache_index].last_used_time << std::endl << "data: " << std::endl;;
+					for(unsigned int z = 0; z < cache[i][cache_index].cache_line.size(); z++){
+						std::cerr << std::hex << cache[i][cache_index].cache_line[z] << " ";
 					}
 					std::cerr << std::endl;
 				}
 
-				cache_hit = true;
+				hit = true;
 				break;	
 			}
 		}
 			
 		//Procedure for cache miss --- cache hit took care immediately after realize it is a hit
-		if(!cache_hit){
-			cache_missed++;
+		if(!hit){
 
 			if(DEBUG){
 				std::cerr << "cache missed --- looking for appropriate slot to perform swap" << std::endl;	
@@ -204,7 +202,9 @@ double Cache_simulator::set_associative(int cache_size, int cache_line_size, int
 			}
 		}
 	}
+		
+		std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 
 	infile.close();	
-	return (double) cache_missed / total_referenced;
+	return (double) cache_hit / total_referenced;
 }
