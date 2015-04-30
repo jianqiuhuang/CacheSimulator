@@ -1,6 +1,6 @@
 #include "CacheSimulator.h"
 
-const static int DEBUG = 0;
+#define DEBUG 0 
 
 Cache_simulator::Cache_simulator(cache_policy type, std::string infile_name, std::string outfile_name){
 	cache_type = type;
@@ -9,11 +9,13 @@ Cache_simulator::Cache_simulator(cache_policy type, std::string infile_name, std
 	start_time = std::chrono::high_resolution_clock::now();
 }
 
-void Cache_simulator::simulate(int cache_size, int cache_line_size, int associativity){
+void Cache_simulator::simulate(int cache_size, int cache_line_size, int associativity, std::string policy){
 	if(cache_type == DIRECT_MAPPED)
 		std::cout << "direct-mapped: " << direct_mapped(cache_size, cache_line_size) * 100 << "%" << std::endl;
 	else if(cache_type == SET_ASSOCIATIVE)
 		std::cout << "set-associative: " << set_associative(cache_size, cache_line_size, associativity) * 100 << "%" << std::endl;
+	else if(cache_type == FULLY_ASSOCIATIVE)
+		std::cout << "fully accociative: " << fully_associative(cache_size, cache_line_size, policy) * 100 << "%" << std::endl;
 	else{
 		std::cerr << "Unknown cache type" << std::endl;
 		exit(1);
@@ -91,7 +93,7 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 		}
 	}
 	infile.close();
-	std::cout << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
+	if(DEBUG) std::cout << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 	return (double) cache_hit / total_referenced;
 }
 
@@ -203,8 +205,145 @@ double Cache_simulator::set_associative(int cache_size, int cache_line_size, int
 		}
 	}
 		
-		std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
+		if(DEBUG) std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 
 	infile.close();	
 	return (double) cache_hit / total_referenced;
 }
+
+double Cache_simulator::fully_associative(int cache_size, int cache_line_size, std::string policy){
+	double return_value = -1;
+	//Least recently used
+	if(policy.compare("LRU") == 0){
+		return_value = set_associative(cache_size, cache_line_size, cache_size/cache_line_size);
+	}
+	//Hot-cold 
+	else if(policy.compare("HOT-COLD") == 0){
+		int cache_entries = cache_size / cache_line_size;
+		if(DEBUG) std::cerr << "number of entries: " << std::dec << cache_entries << std::endl;
+		//array implementation of hot-cold tree
+		std::vector<int> hot_cold (cache_entries-1, 0);
+		if(DEBUG) std::cerr << "size of hot_cold tree: " << hot_cold.size() << std::endl;
+		struct info tmp;
+		tmp.last_used_time = -1;
+		tmp.cache_line.resize(cache_line_size, -1);
+		if(DEBUG) std::cerr << "size of cache line: " << tmp.cache_line.size() << std::endl;
+		std::vector<struct info> cache (cache_entries, tmp);
+		if(DEBUG) std::cerr << "size of cache: " << cache.size() << std::endl;
+		std::ifstream infile (input_file_name);
+		char instruction_type;
+		long long address, base;
+		long long total_referenced =0, cache_hit = 0;
+		std::string line;
+
+		while(std::getline(infile, line)){
+			total_referenced++;
+		
+			std::stringstream ss;
+			ss << line;
+			ss >> instruction_type >> std::hex >> address;
+		
+			if(DEBUG) std::cerr << "address read from file: " << instruction_type << "_0x" << std::hex << address << std::endl;
+				
+			base = (address / cache_line_size) * cache_line_size;
+			
+			bool hit = false;
+			int hit_index = -1;
+			int cache_line_index = address % cache_line_size;
+			//Checking whether it is a cache hit or miss
+			for(unsigned int i = 0; i < cache.size(); i++){
+				//cache hit 
+				if(cache[i].cache_line[cache_line_index] == address){
+					hit = true;
+					hit_index = i;
+					break;
+				}
+			}
+			int hot_cold_index = -1;
+			//Hit--update hot-cold bits
+			if(hit){
+				if(DEBUG){
+				std::cout << "before updating tree:" << std::endl;
+				for(int i = 0; i < cache_entries -1; i++){
+					std::cout << "at index: " << i << "--" << hot_cold[i] << " ";
+				}
+				std::cout << std::endl;
+				}
+				cache_hit++;
+				//location in hot-cold tree
+				hot_cold_index = hit_index + cache_entries -1;
+				if(DEBUG)std::cerr << "hit!!! at index:" << hit_index << " hot_cold_index: " << hot_cold_index << std::endl;
+				while(hot_cold_index != 0){
+					//Backtrace the tree to update hot-cold bits
+					//Right child
+					if(hot_cold_index % 2 == 0){
+						hot_cold_index = (hot_cold_index - 2) / 2;
+						hot_cold[hot_cold_index] = 0;
+					//Left child
+					}else{
+						hot_cold_index = (hot_cold_index - 1) / 2;
+						hot_cold[hot_cold_index] = 1;
+					}
+					if(DEBUG) std::cerr << "Updating hot-cold bits at hot_cold_index: " << std::dec << hot_cold_index << std::endl;
+				}
+				if(DEBUG){
+				std::cout << "after updating tree:" << std::endl;
+				for(int i = 0; i < cache_entries -1; i++){
+					std::cout << "at index: " << i << "--" << hot_cold[i] << " ";
+				}
+				std::cout << std::endl;
+				}
+			}
+			//cache miss
+			else{
+				if(DEBUG) std::cerr << "Missed!!!" << std::endl;
+				//Updating the hot-cold bits (binary tree)
+				//Variable hot_cold_index is holding the index (tree representation) of the cache line that is going to be replaced
+				int victim_index = -1;
+				hot_cold_index = 0;
+				for(int i = 0; i < log2(cache_entries); i++){
+					if(hot_cold[hot_cold_index] == 0){
+						hot_cold[hot_cold_index] = 1;
+						hot_cold_index = hot_cold_index * 2 + 1;
+					}else{
+						hot_cold[hot_cold_index] = 0;
+						hot_cold_index = hot_cold_index * 2 + 2;
+					}
+				}	
+
+				//Convert hot_cold_index to 0~cache_entries
+				victim_index = hot_cold_index - (cache_entries - 1);
+				if(DEBUG) std::cerr << "victim at index(cache): " << std::dec << victim_index << std::endl;	
+				if(DEBUG) std::cerr << "hot_cold_index: " << hot_cold_index << std::endl;
+				//Putting information into designated cache line
+				for(unsigned int i = 0; i < cache[victim_index].cache_line.size(); i++){
+					cache[victim_index].cache_line[i] = base + i;
+				}
+			}
+			if(DEBUG){
+			std::cerr << "Verifying content in cache" << std::endl;
+			for(unsigned int i = 0; i < cache.size(); i++){
+				for(unsigned int j = 0; j < cache[i].cache_line.size(); j++){
+					if(cache[i].cache_line[j] == -1)
+						std::cerr << std::dec << cache[i].cache_line[j] << " ";
+					else
+						std::cerr << "0x" << std::hex << cache[i].cache_line[j] << " ";
+					
+				}
+				std::cerr << std::endl;
+			}
+			}
+		}
+		std::cerr << "total referenced: " << total_referenced << " cache hit: " << cache_hit << std::endl;
+		return_value = (double) cache_hit / total_referenced;
+		infile.close();
+	}else{
+		std::cerr << "UNKNOW REPLACEMENT POLICY.. PLEASE USE EITHER LRU OR HOT-COLD" << std::endl;
+		exit(1);
+	}
+	return return_value;
+}
+
+//double Cache_simulator::set_associative_no_alloc_on_write_miss(int cache_size, int cache_line_size, int associatiity){
+	
+//}

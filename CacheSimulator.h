@@ -9,6 +9,8 @@
 #include <vector>
 #include <stdlib.h>
 #include <chrono>
+#include <math.h>
+#include <iomanip>
 //Identify which cache policy to use
 enum cache_policy{DIRECT_MAPPED, SET_ASSOCIATIVE, FULLY_ASSOCIATIVE, SET_ASSOCIATIVE_NO_ALLOC_ON_WRITE_MISS, SET_ASSOCIATIVE_NEXTLINE_PREFETCHING, PREFETCH_ON_MISS};
 
@@ -22,13 +24,13 @@ class Cache_simulator{
 	public:
 		Cache_simulator(cache_policy type, std::string infile_name, std::string outfile_name);
 		
-		void simulate(int cache_size, int cache_line_size, int ways);
+		void simulate(int cache_size, int cache_line_size, int ways, std::string policy);
 	private:
 		double direct_mapped(int cache_size, int cache_line_size);
 
 		double set_associative(int cache_size, int cache_line_size, int associativity);
 
-		double fully_associative(int cache_size, int cache_line_size, char *replacement_policy);
+		double fully_associative(int cache_size, int cache_line_size, std::string replacement_policy);
 
 		double set_associative_no_alloc_on_wirte_miss(int cache_size, int cache_line_size, int associativity);
 
