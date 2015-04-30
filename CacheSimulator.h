@@ -32,7 +32,7 @@ class Cache_simulator{
 
 		double fully_associative(int cache_size, int cache_line_size, std::string replacement_policy);
 
-		double set_associative_no_alloc_on_wirte_miss(int cache_size, int cache_line_size, int associativity);
+		double set_associative_no_alloc_on_write_miss(int cache_size, int cache_line_size, int associativity);
 
 		double set_associative_nextline_prefetching (int cache_size, int cache_line_size, int associativity);
 

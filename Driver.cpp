@@ -20,16 +20,36 @@ int main(int argc, char** argv){
 //	int associativity_array[] = {2, 4, 8, 16};
 //	cache_size = 16384;
 //	for(int i = 0; i < 4; i++){
-//		set_associative.simulate(cache_size1, cache_line_size, associativity_array[i], policy);
+//		set_associative.simulate(cache_size, cache_line_size, associativity_array[i], policy);
 //	}	
 
 	Cache_simulator fully_associative(FULLY_ASSOCIATIVE, argv[1], "out.txt");
-	cache_line_size = 32;
-	cache_size = 16384;
+//	cache_line_size = 32;
+//	cache_size = 16384;
 //	policy = "LRU";
 //	fully_associative.simulate(cache_size, cache_line_size, associativity, policy);
-	policy = "HOT-COLD";
-	fully_associative.simulate(cache_size, cache_line_size, associativity, policy);
-//	fully_associative.simulate(4, 1, -1, "HOT-COLD");
+//	policy = "HOT-COLD";
+//	fully_associative.simulate(cache_size, cache_line_size, associativity, policy);
+
+	Cache_simulator set_associative_no_alloc_write_miss(SET_ASSOCIATIVE_NO_ALLOC_ON_WRITE_MISS, argv[1], "out.txt");
+///	int associativity_array[] = {2, 4, 8, 16};
+//	cache_size = 16384;
+//	for(int i = 0; i < 4; i++){
+//		set_associative_no_alloc_write_miss.simulate(cache_size, cache_line_size, associativity_array[i], policy);
+//	}	
+	
+	Cache_simulator set_associative_nextline_prefetching(SET_ASSOCIATIVE_NEXTLINE_PREFETCHING, argv[1], "out.txt");
+//	int associativity_array[] = {2, 4, 8, 16};
+//	cache_size = 16384;
+//	for(int i = 0; i < 4; i++){
+//		set_associative_nextline_prefetching.simulate(cache_size, cache_line_size, associativity_array[i], policy);
+//	}	
+
+	Cache_simulator prefetch_on_miss(PREFETCH_ON_MISS, argv[1], "out.txt");
+	int associativity_array[] = {2, 4, 8, 16};
+	cache_size = 16384;
+	for(int i = 0; i < 4; i++){
+		prefetch_on_miss.simulate(cache_size, cache_line_size, associativity_array[i], policy);
+	}	
 	return 0;
 }
