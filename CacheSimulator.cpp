@@ -2,34 +2,35 @@
 
 #define DEBUG 0
 
-Cache_simulator::Cache_simulator(cache_policy type, std::string infile_name, std::string outfile_name){
+Cache_simulator::Cache_simulator(cache_policy type, std::string infile_name){
 	cache_type = type;
 	input_file_name = infile_name;	
-	output_file_name = outfile_name;
 	start_time = std::chrono::high_resolution_clock::now();
+	total_referenced = 0;
 }
 
-void Cache_simulator::simulate(int cache_size, int cache_line_size, int associativity, std::string policy){
+long long Cache_simulator::simulate(int cache_size, int cache_line_size, int associativity, std::string policy){
+	long long cache_hit = -1;
 	if(cache_type == DIRECT_MAPPED)
-		std::cout << "direct-mapped: " << direct_mapped(cache_size, cache_line_size) * 100 << "%" << std::endl;
+		cache_hit = direct_mapped(cache_size, cache_line_size);
 	else if(cache_type == SET_ASSOCIATIVE)
-		std::cout << "set-associative: " << set_associative(cache_size, cache_line_size, associativity) * 100 << "%" << std::endl;
+		cache_hit = set_associative(cache_size, cache_line_size, associativity);
 	else if(cache_type == FULLY_ASSOCIATIVE)
-		std::cout << "fully accociative: " << fully_associative(cache_size, cache_line_size, policy) * 100 << "%" << std::endl;
-	else if(cache_type == SET_ASSOCIATIVE_NO_ALLOC_ON_WRITE_MISS){
-		std::cout << "set-associative with no allocation on write miss or store instruction miss" << set_associative_no_alloc_on_write_miss(cache_size, cache_line_size, associativity) * 100 << "%" << std::endl; 
-	}
-	else if(cache_type == SET_ASSOCIATIVE_NEXTLINE_PREFETCHING){
-		std::cout << "set-associative with nextline prefetching" << set_associative_nextline_prefetching(cache_size, cache_line_size, associativity) * 100 << "%" << std::endl;	
-	}else if(cache_type == PREFETCH_ON_MISS){
-		std::cout << "prefetch on miss" << prefetch_on_miss(cache_size, cache_line_size, associativity) * 100 << "%" << std::endl;
-	}else{
+		cache_hit = fully_associative(cache_size, cache_line_size, policy);
+	else if(cache_type == SET_ASSOCIATIVE_NO_ALLOC_ON_WRITE_MISS)
+		cache_hit = set_associative_no_alloc_on_write_miss(cache_size, cache_line_size, associativity);
+	else if(cache_type == SET_ASSOCIATIVE_NEXTLINE_PREFETCHING)
+		cache_hit = set_associative_nextline_prefetching(cache_size, cache_line_size, associativity);
+	else if(cache_type == PREFETCH_ON_MISS)
+		cache_hit = prefetch_on_miss(cache_size, cache_line_size, associativity);
+	else{
 		std::cerr << "Unknown cache type" << std::endl;
 		exit(1);
 	}
+	return cache_hit;
 }
 
-double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
+long long Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 	int cache_entries = cache_size / cache_line_size;
 	if(DEBUG){
 		std::cerr << "the cache has " << cache_entries << " entries" << std::endl;
@@ -41,8 +42,8 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 	std::string line;
 	char instruction_type;
 	long long address, cache_line_index, base, cache_index;
-	long long total_referenced = 0, cache_hit = 0;
-	
+	long long cache_hit = 0;
+	total_referenced = 0;
 	while(std::getline(infile, line)){
 		total_referenced++;
 
@@ -100,11 +101,10 @@ double Cache_simulator::direct_mapped(int cache_size, int cache_line_size){
 		}
 	}
 	infile.close();
-	if(DEBUG) std::cout << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
-	return (double) cache_hit / total_referenced;
+	return cache_hit;
 }
 
-double Cache_simulator::set_associative(int cache_size, int cache_line_size, int associativity){
+long long Cache_simulator::set_associative(int cache_size, int cache_line_size, int associativity){
 	int cache_entries = cache_size / cache_line_size / associativity;
 	if(DEBUG){
 		std::cerr << "the cache has " << associativity << " ways and " << cache_entries << " entries in each way, and " << cache_line_size << " elements per cache line" << std::endl;
@@ -121,8 +121,9 @@ double Cache_simulator::set_associative(int cache_size, int cache_line_size, int
 	std::string line;
 	char instruction_type;
 	long long address, cache_line_index, base, cache_index;
-	long long total_referenced = 0, cache_hit = 0;
-
+	long long cache_hit = 0;
+	total_referenced = 0;
+	
 	while(std::getline(infile, line)){
 		bool hit = false;
 		total_referenced++;
@@ -212,14 +213,13 @@ double Cache_simulator::set_associative(int cache_size, int cache_line_size, int
 		}
 	}
 		
-		if(DEBUG) std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 
 	infile.close();	
-	return (double) cache_hit / total_referenced;
+	return cache_hit;
 }
 
-double Cache_simulator::fully_associative(int cache_size, int cache_line_size, std::string policy){
-	double return_value = -1;
+long long Cache_simulator::fully_associative(int cache_size, int cache_line_size, std::string policy){
+	long long return_value = -1;
 	//Least recently used
 	if(policy.compare("LRU") == 0){
 		return_value = set_associative(cache_size, cache_line_size, cache_size/cache_line_size);
@@ -240,12 +240,12 @@ double Cache_simulator::fully_associative(int cache_size, int cache_line_size, s
 		std::ifstream infile (input_file_name);
 		char instruction_type;
 		long long address, base;
-		long long total_referenced =0, cache_hit = 0;
+		long long cache_hit = 0;
 		std::string line;
+		total_referenced = 0;
 
 		while(std::getline(infile, line)){
 			total_referenced++;
-		
 			std::stringstream ss;
 			ss << line;
 			ss >> instruction_type >> std::hex >> address;
@@ -341,8 +341,7 @@ double Cache_simulator::fully_associative(int cache_size, int cache_line_size, s
 			}
 			}
 		}
-		std::cerr << "total referenced: " << total_referenced << " cache hit: " << cache_hit << std::endl;
-		return_value = (double) cache_hit / total_referenced;
+		return_value = cache_hit;
 		infile.close();
 	}else{
 		std::cerr << "UNKNOW REPLACEMENT POLICY.. PLEASE USE EITHER LRU OR HOT-COLD" << std::endl;
@@ -351,7 +350,7 @@ double Cache_simulator::fully_associative(int cache_size, int cache_line_size, s
 	return return_value;
 }
 
-double Cache_simulator::set_associative_no_alloc_on_write_miss(int cache_size, int cache_line_size, int associativity){
+long long Cache_simulator::set_associative_no_alloc_on_write_miss(int cache_size, int cache_line_size, int associativity){
 	int cache_entries = cache_size / cache_line_size / associativity;
 	if(DEBUG){
                 std::cerr << "the cache has " << associativity << " ways and " << cache_entries << " entries in each way, and " << cache_line_size << " elements per cache line" << std::endl;
@@ -368,11 +367,12 @@ double Cache_simulator::set_associative_no_alloc_on_write_miss(int cache_size, i
         std::string line;
         char instruction_type;
         long long address, cache_line_index, base, cache_index;
-        long long total_referenced = 0, cache_hit = 0;
+        long long cache_hit = 0;
+	total_referenced  = 0;
 
         while(std::getline(infile, line)){
                 bool hit = false;
-                total_referenced++;
+		total_referenced++;
 
                 std::stringstream ss;
                 ss << line;
@@ -459,13 +459,12 @@ double Cache_simulator::set_associative_no_alloc_on_write_miss(int cache_size, i
                 }
         }
 
-        std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 
         infile.close();
-        return (double) cache_hit / total_referenced;
+        return cache_hit;
 }
 
-double Cache_simulator::set_associative_nextline_prefetching(int cache_size, int cache_line_size, int associativity){
+long long Cache_simulator::set_associative_nextline_prefetching(int cache_size, int cache_line_size, int associativity){
 	int cache_entries = cache_size / cache_line_size / associativity;
         
 	if(DEBUG){
@@ -483,11 +482,12 @@ double Cache_simulator::set_associative_nextline_prefetching(int cache_size, int
         std::string line;
         char instruction_type;
         long long address, cache_line_index, base, cache_index;
-        long long total_referenced = 0, cache_hit = 0;
+        long long cache_hit = 0;
+	total_referenced  = 0;
 
         while(std::getline(infile, line)){
+		total_referenced++;
                 bool hit = false;
-                total_referenced++;
 
                 std::stringstream ss;
                 ss << line;
@@ -611,14 +611,13 @@ double Cache_simulator::set_associative_nextline_prefetching(int cache_size, int
 		
         
 	}
-                std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 
         infile.close();
-        return (double) cache_hit / total_referenced;
+        return cache_hit;
 
 }
 
-double Cache_simulator::prefetch_on_miss(int cache_size, int cache_line_size, int associativity){
+long long Cache_simulator::prefetch_on_miss(int cache_size, int cache_line_size, int associativity){
         int cache_entries = cache_size / cache_line_size / associativity;
 
         if(DEBUG){
@@ -636,11 +635,12 @@ double Cache_simulator::prefetch_on_miss(int cache_size, int cache_line_size, in
         std::string line;
         char instruction_type;
         long long address, cache_line_index, base, cache_index;
-        long long total_referenced = 0, cache_hit = 0;
+        long long cache_hit = 0;
+	total_referenced  = 0;
 
         while(std::getline(infile, line)){
                 bool hit = false;
-                total_referenced++;
+		total_referenced++;
 
                 std::stringstream ss;
                 ss << line;
@@ -765,10 +765,12 @@ double Cache_simulator::prefetch_on_miss(int cache_size, int cache_line_size, in
 
 
         }
-                std::cerr << "total referenced: " << total_referenced << " --- cache hit: " << cache_hit << std::endl;
 
         infile.close();
-        return (double) cache_hit / total_referenced;
+        return cache_hit;
 
 }
 
+long long Cache_simulator::get_total_referenced(){
+	return total_referenced;
+}

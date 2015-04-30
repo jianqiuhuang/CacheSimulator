@@ -22,23 +22,27 @@ struct info{
 //All cache_policy simulators will return the cache miss rate in type double
 class Cache_simulator{
 	public:
-		Cache_simulator(cache_policy type, std::string infile_name, std::string outfile_name);
+		Cache_simulator(cache_policy type, std::string infile_name);
 		
-		void simulate(int cache_size, int cache_line_size, int ways, std::string policy);
+		long long simulate(int cache_size, int cache_line_size, int ways, std::string policy);
+
+		long long get_total_referenced();
 	private:
-		double direct_mapped(int cache_size, int cache_line_size);
+		long long direct_mapped(int cache_size, int cache_line_size);
 
-		double set_associative(int cache_size, int cache_line_size, int associativity);
+		long long set_associative(int cache_size, int cache_line_size, int associativity);
 
-		double fully_associative(int cache_size, int cache_line_size, std::string replacement_policy);
+		long long fully_associative(int cache_size, int cache_line_size, std::string replacement_policy);
 
-		double set_associative_no_alloc_on_write_miss(int cache_size, int cache_line_size, int associativity);
+		long long set_associative_no_alloc_on_write_miss(int cache_size, int cache_line_size, int associativity);
 
-		double set_associative_nextline_prefetching (int cache_size, int cache_line_size, int associativity);
+		long long set_associative_nextline_prefetching (int cache_size, int cache_line_size, int associativity);
 
-		double prefetch_on_miss (int cache_size, int cache_line_size, int associativity);
+		long long prefetch_on_miss (int cache_size, int cache_line_size, int associativity);
 
-		std::string input_file_name, output_file_name;
+		long long total_referenced;		
+
+		std::string input_file_name;
 		
 		cache_policy cache_type;
 		

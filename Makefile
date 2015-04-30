@@ -1,4 +1,4 @@
-EXE = CacheSim
+EXE = cache-sim
 
 SRC = \
 	Driver.cpp\
