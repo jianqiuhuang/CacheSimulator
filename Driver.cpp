@@ -58,6 +58,10 @@ int main(int argc, char** argv){
 		outfile << " " << prefetch_on_miss.get_total_referenced() << " ";
 	}	
 	outfile << std::endl;
+
+//Extra credit
+	Cache_simulator test(FIFO, argv[1]);
+	std::cout << "Extra credit: FIFO replacement\n" << "Cache hit: " << test.simulate(16*1024, 32, -1, "") << ", total referenced: " << test.get_total_referenced() << std::endl;
 	outfile.close();
 	return 0;
 }

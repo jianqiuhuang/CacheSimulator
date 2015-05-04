@@ -4,18 +4,18 @@ SRC = \
 	Driver.cpp\
 	CacheSimulator.cpp\
 
-OBJ_FILES := $(SRC:.cpp = .o)
+OBJ_FILES := $(SRC:.cpp=.o)
 
 GCC = g++
 FLAGS = -g -Wall
 COMPILER = -std=c++11
 
-all: $(EXE)
+all:	$(EXE)
 	
 $(EXE): $(OBJ_FILES)
 	$(GCC) $(FLAGS) $(COMPILER) $(OBJ_FILES) -o $@
 
-%.o: %.cpp
+%.o:	%.cpp
 	$(GCC) $(FLAGS) $(COMPILER) -c $^
 
 clean:

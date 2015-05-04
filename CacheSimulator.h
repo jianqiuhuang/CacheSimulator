@@ -12,7 +12,7 @@
 #include <math.h>
 #include <iomanip>
 //Identify which cache policy to use
-enum cache_policy{DIRECT_MAPPED, SET_ASSOCIATIVE, FULLY_ASSOCIATIVE, SET_ASSOCIATIVE_NO_ALLOC_ON_WRITE_MISS, SET_ASSOCIATIVE_NEXTLINE_PREFETCHING, PREFETCH_ON_MISS};
+enum cache_policy{DIRECT_MAPPED, SET_ASSOCIATIVE, FULLY_ASSOCIATIVE, SET_ASSOCIATIVE_NO_ALLOC_ON_WRITE_MISS, SET_ASSOCIATIVE_NEXTLINE_PREFETCHING, PREFETCH_ON_MISS, FIFO};
 
 struct info{
 	double last_used_time;
@@ -27,6 +27,7 @@ class Cache_simulator{
 		long long simulate(int cache_size, int cache_line_size, int ways, std::string policy);
 
 		long long get_total_referenced();
+	
 	private:
 		long long direct_mapped(int cache_size, int cache_line_size);
 
@@ -39,6 +40,8 @@ class Cache_simulator{
 		long long set_associative_nextline_prefetching (int cache_size, int cache_line_size, int associativity);
 
 		long long prefetch_on_miss (int cache_size, int cache_line_size, int associativity);
+		
+		long long fifo_set_associative(int cache_size, int cahce_line_size, int associativity);
 
 		long long total_referenced;		
 
